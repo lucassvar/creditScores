@@ -1,0 +1,123 @@
+---
+title: "Credit Risk Prediction Project Report"
+author: "Lucas Varela"
+date: "2024-01-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This machine learning project aims to predict credit risk using a dataset containing various attributes related to individuals' credit applications. The dataset includes information such as checking account status, credit history, purpose of credit, credit amount, employment details, and more.
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(rmarkdown)
+credit_data <- read.arff("rda/credit-g-dataset.arff")
+```
+
+## Data Preprocessing
+
+No missing values were found in the dataset, ensuring a complete and reliable data:
+
+```{r echo=TRUE}
+sum(colSums(is.na(credit_data)))
+```
+
+Categorical variables were converted to factors for compatibility with machine learning algorithms:
+
+```{r}
+credit_data <- credit_data %>%
+	mutate_if(is.character, as.factor)
+```
+
+## Exploratory Data Analysis (EDA)
+
+```{r echo=TRUE}
+summary(credit_data)
+```
+
+A summary of the dataset reveals insights into the distribution of key variables:
+
+-   Checking status is diverse, with the majority having no checking account.
+
+-   Credit history varies, with a significant number having existing paid credits.
+
+-   Purpose of credit spans different categories such as radio/TV, new car, and furniture/equipment.
+
+-   Age ranges from 19 to 75, with a mean of 35.55.
+
+-   The dataset contains more instances of 'good' credit (700) than 'bad' credit (300).
+
+## Model Training and Evaluation
+
+The dataset was divided into training (80%) and testing (20%) sets using a random seed for reproducibility
+
+```{r}
+set.seed(123)
+train_index <- createDataPartition(credit_data$class, p = 0.8, list = FALSE)
+train_data <- credit_data[train_index, ]
+test_data <- credit_data[-train_index, ]
+```
+
+A random forest classifier with 100 trees was chosen for its ability to handle complex relationships in the data.
+
+```{r}
+model <- randomForest(class ~ ., data = train_data, ntree = 100)
+```
+
+Finally we need to evaluate the model, the confusion matrix and related statistics for the test set are as follows:
+
+```{r echo=TRUE}
+predictions <- predict(model, test_data)
+conf_matrix <- confusionMatrix(predictions, test_data$class)
+print(conf_matrix)
+```
+
+This confusion matrix indicates the performance of our machine learning model on a binary classification task. Here's a brief analysis:
+
+-   **Accuracy:** The model's overall accuracy is 74%, meaning it correctly predicted the class for 74% of the instances.
+
+-   **Sensitivity (True Positive Rate):** The ability to correctly identify the 'bad' class is 36.67%. This suggests the model struggles with capturing instances of the 'bad' class.
+
+-   **Specificity (True Negative Rate):** The model performs well in correctly identifying the 'good' class, with a specificity of 90%.
+
+-   **Precision (Pos Pred Value):** Of the instances predicted as 'bad' by the model, 61.11% are actually 'bad'. This metric reflects the precision of the positive predictions.
+
+-   **Kappa:** Kappa coefficient measures the agreement between the model's predictions and actual values, adjusted for chance. A value of 0.3011 suggests a fair agreement.
+
+-   **Mcnemar's Test P-Value:** The p-value of 0.001425 from McNemar's test indicates a significant difference between the model's predictions and the actual outcomes.
+
+## Feature Importance
+
+The random forest model assigned importance scores to each feature.
+
+```{r echo=TRUE}
+importance(model)
+```
+
+The top five important features based on Mean Decrease Gini are:
+
+1.  Checking status
+
+2.  Credit amount
+
+3.  Duration
+
+4.  Age
+
+5.  Purpose of credit
+
+```{r echo=TRUE}
+varImpPlot(model)
+```
+
+## Conclusion
+
+This machine learning project successfully developed a credit risk prediction model using a random forest algorithm. The model demonstrated good predictive performance, and the feature importance analysis provides insights into key factors influencing credit risk. Further model refinement and hyperparameter tuning could enhance its performance.
